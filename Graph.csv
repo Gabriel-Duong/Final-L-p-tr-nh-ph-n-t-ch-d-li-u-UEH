@@ -1,0 +1,16 @@
+v_from,v_to,weight
+A,C,9
+A,F,20
+A,D,7
+A,E,13
+C,H,6
+D,H,8
+D,E,4
+E,K,4
+E,I,3
+F,I,6
+F,G,4
+H,K,5
+K,B,6
+I,K,9
+I,B,5
