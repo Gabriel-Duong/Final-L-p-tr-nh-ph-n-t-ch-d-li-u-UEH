@@ -2,6 +2,7 @@ import pygame
 import sys
 from typing import List, Tuple, Set
 import heapq
+import random
 
 class Position:
     def __init__(self, x: int, y: int):
@@ -40,32 +41,42 @@ class AStar:
         self.dirt_weights = {pos: 1 for pos in dirt_positions}
 
     @staticmethod
-    def manhattan_distance(a, b):
-        return abs(a[0] - b[0]) + abs(a[1] - b[1])
+    def chebyshev_distance(a, b):
+        return max(abs(a[0] - b[0]), abs(a[1] - b[1]))
 
     def a_star_single_target(self, start, target):
+        start_cell = Cell(Position(start[0], start[1]))
+        target_cell = Cell(Position(target[0], target[1]))
         queue = []
-        heapq.heappush(queue, (0, start, []))  # (f(x), current position, path)
+        heapq.heappush(queue, (0, start_cell))  # (f(x), current cell)
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]
         visited = set()
-        flag = True
+        visited.add((start_cell.position.x, start_cell.position.y))
+
         while queue:
-            f, current, path = heapq.heappop(queue)
-            if current == target:
-                return path + [current]
+            f, current_cell = heapq.heappop(queue)
+            if current_cell.position == target_cell.position:
+                return self.reconstruct_path(current_cell)
             for d in directions:
-                neighbor = (current[0] + d[0], current[1] + d[1])
-                if 0 <= neighbor[0] < self.n and 0 <= neighbor[1] < self.m and neighbor not in visited:
-                    visited.add(neighbor)
-                    h = self.manhattan_distance(neighbor, target)
-                    g = len(path)
-                    f = g + h
-                    if flag:
-                        heapq.heappush(queue, (f, neighbor, path))
-                    else:
-                        heapq.heappush(queue, (f, neighbor, path + [current]))
-            flag = False
+                neighbor_pos = (current_cell.position.x + d[0], current_cell.position.y + d[1])
+                if 0 <= neighbor_pos[0] < self.n and 0 <= neighbor_pos[1] < self.m and neighbor_pos not in visited:
+                    visited.add(neighbor_pos)
+                    neighbor_cell = Cell(Position(neighbor_pos[0], neighbor_pos[1]), parent=current_cell)
+                    h = self.chebyshev_distance(neighbor_pos, (target_cell.position.x, target_cell.position.y))
+                    g = current_cell.g + 1
+                    neighbor_cell.g = g
+                    neighbor_cell.h = h
+                    neighbor_cell.f = g + h
+                    heapq.heappush(queue, (neighbor_cell.f, neighbor_cell))
         return None
+    
+    def reconstruct_path(self, cell):
+        path = []
+        while cell:
+            path.append((cell.position.x, cell.position.y))
+            cell = cell.parent
+        return path[::-1]
+
 
     def a_star_cleaning(self):
         current_position = self.start
@@ -86,15 +97,13 @@ class AStar:
                 if segment:
                     path_copy.extend(segment)
                     for pos in dirt_weights_copy:
-                        dirt_weights_copy[pos] += len(segment)
-                    cost = len(segment) + dirt_weights_copy[node]
+                        dirt_weights_copy[pos] += len(segment)-1
+                        print(dirt_weights_copy)
+                    cost = (len(segment)-1) + dirt_weights_copy[node]
                     direction_copy.append(node)
                     f_copy += cost
                     current_copy = node
                     heapq.heappush(queue_Astart, (f_copy, current_copy, path_copy, direction_copy, dirt_weights_copy))
-                else:
-                    valid_path = False
-                    break
         return None
 
 class VacuumRobot:
@@ -138,7 +147,7 @@ class VacuumRobot:
         for col in range(self.cols):
             x = col * self.CELL_SIZE + self.GRID_PADDING + self.LABEL_PADDING
             y = self.height - self.GRID_PADDING + 10
-            text = font.render(str(col+1), True, self.COLORS['text'])
+            text = font.render(str(col), True, self.COLORS['text'])
             text_rect = text.get_rect(center=(x + self.CELL_SIZE/2, y))
             self.screen.blit(text, text_rect)
 
@@ -146,7 +155,7 @@ class VacuumRobot:
         for row in range(self.rows):
             x = self.GRID_PADDING - 10
             y = self.height - (row + 1) * self.CELL_SIZE - self.GRID_PADDING - self.LABEL_PADDING
-            text = font.render(str(row+1), True, self.COLORS['text'])
+            text = font.render(str(row), True, self.COLORS['text'])
             text_rect = text.get_rect(center=(x, y + self.CELL_SIZE/2))
             self.screen.blit(text, text_rect)
         
@@ -192,10 +201,9 @@ class VacuumRobot:
                     row = self.rows - 1 - (y - self.GRID_PADDING) // self.CELL_SIZE
                     if 0 <= row < self.rows and 0 <= col < self.cols:
                         return row, col
-            pygame.time.wait(50)
+            pygame.time.wait(100)
 
     def clean_dirty_cells(self):
-        start_cell = None
         dirty_cells = []
         
         print("Click to select start position")
@@ -219,7 +227,8 @@ class VacuumRobot:
                         self.grid[row][col].status = 'dirty'
                         dirty_cells.append((row, col))
                         self.draw_grid()
-            pygame.time.wait(50)
+                pygame.time.wait(50)
+
 
     def print_path(self, path):
         print("\nComplete Path taken by the robot:")
