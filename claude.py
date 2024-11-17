@@ -44,7 +44,7 @@ class AStar:
     def chebyshev_distance(a, b):
         return max(abs(a[0] - b[0]), abs(a[1] - b[1]))
 
-    def a_star_single_target(self, start, target):
+    def find_path(self, start, target):
         start_cell = Cell(Position(start[0], start[1]))
         target_cell = Cell(Position(target[0], target[1]))
         queue = []
@@ -78,12 +78,12 @@ class AStar:
         return path[::-1]
 
 
-    def a_star_cleaning(self):
+    def solve(self):
         current_position = self.start
-        queue_Astart = []
-        heapq.heappush(queue_Astart, (0, current_position, [], [], self.dirt_weights))
-        while queue_Astart:
-            f, current, path, direction, dirt_weights_true = heapq.heappop(queue_Astart)
+        queue_Astar = []
+        heapq.heappush(queue_Astar, (0, current_position, [], [], self.dirt_weights))
+        while queue_Astar:
+            f, current, path, direction, dirt_weights_true = heapq.heappop(queue_Astar)
             start_pos = current
             if len(direction) == len(self.dirt_positions):
                 for pos in self.dirt_positions:
@@ -93,7 +93,7 @@ class AStar:
 
             for node in {value for value in self.dirt_positions if value not in direction}:
                 f_copy, current_copy, path_copy, direction_copy, dirt_weights_copy = f, current, path.copy(), direction.copy(), dirt_weights_true.copy()
-                segment = self.a_star_single_target(start_pos, node)
+                segment = self.find_path(start_pos, node)
                 if segment:
                     path_copy.extend(segment)
                     for pos in dirt_weights_copy:
@@ -103,7 +103,7 @@ class AStar:
                     direction_copy.append(node)
                     f_copy += cost
                     current_copy = node
-                    heapq.heappush(queue_Astart, (f_copy, current_copy, path_copy, direction_copy, dirt_weights_copy))
+                    heapq.heappush(queue_Astar, (f_copy, current_copy, path_copy, direction_copy, dirt_weights_copy))
         return None
 
 class VacuumRobot:
@@ -117,6 +117,7 @@ class VacuumRobot:
             'black': (0, 0, 0),
             'red': (255, 0, 0),
             'gray': (128, 128, 128),
+            'pink': (255, 192, 203),
             'grid': (200, 200, 200),
             'text': (100, 100, 100)  # Color for coordinate labels
         }
@@ -176,6 +177,8 @@ class VacuumRobot:
                     color = self.COLORS['black']
                 elif cell.status == 'path':
                     color = self.COLORS['gray']
+                elif cell.status == 'cleaned':
+                    color = self.COLORS['pink']
                 else:
                     color = self.COLORS['white']
                 
@@ -247,16 +250,20 @@ class VacuumRobot:
         
         # Initialize A* algorithm
         astar = AStar(self.grid, start_pos, dirty_cells, self.rows, self.cols)
-        path, cost = astar.a_star_cleaning()
+        path, cost = astar.solve()
         
         if path:
             # Visualize path
             for pos in path:
-                if self.grid[pos[0]][pos[1]].status != 'start' and \
-                   self.grid[pos[0]][pos[1]].status != 'dirty':
-                    self.grid[pos[0]][pos[1]].status = 'path'
-                self.draw_grid()
-                pygame.time.wait(100)
+                if self.grid[pos[0]][pos[1]].status != 'start':
+                    if self.grid[pos[0]][pos[1]].status == 'dirty':
+                        self.grid[pos[0]][pos[1]].status = 'cleaned'
+                        self.draw_grid()
+
+                    elif self.grid[pos[0]][pos[1]].status != 'cleaned':
+                        self.grid[pos[0]][pos[1]].status = 'path'
+                        self.draw_grid()
+                pygame.time.wait(300)
             
             print("All dirty cells have been cleaned!")
             print(f"Total cost: {cost}")
