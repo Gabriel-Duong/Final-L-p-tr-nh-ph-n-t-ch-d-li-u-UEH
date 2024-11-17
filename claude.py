@@ -11,10 +11,11 @@ class Position:
     def __eq__(self, other):
         return self.x == other.x and self.y == other.y
     
-    def __hash__(self):
+    # Hash position để sử dụng nó như key trong set hoặc dictionary
+    def __hash__(self) -> tuple:
         return hash((self.x, self.y))
     
-    def __str__(self):
+    def __str__(self) -> str:
         return f"({self.x}, {self.y})"
 
 class Cell:
@@ -124,11 +125,11 @@ class VacuumRobot:
     def get_grid_size(self) -> Tuple[int, int]:
         while True:
             try:
-                size = input("Enter grid size (e.g., 10x8): ")
+                size = input("Enter grid size (e.g., 8x10): ")
                 cols, rows = map(int, size.lower().split('x'))
                 return rows, cols
             except:
-                print("Invalid format. Please use format like '10x8'")
+                print("Invalid format. Please use format like '8x10'")
 
     def draw_coordinates(self):
         font = pygame.font.Font(None, 24)
@@ -137,7 +138,7 @@ class VacuumRobot:
         for col in range(self.cols):
             x = col * self.CELL_SIZE + self.GRID_PADDING + self.LABEL_PADDING
             y = self.height - self.GRID_PADDING + 10
-            text = font.render(str(col), True, self.COLORS['text'])
+            text = font.render(str(col+1), True, self.COLORS['text'])
             text_rect = text.get_rect(center=(x + self.CELL_SIZE/2, y))
             self.screen.blit(text, text_rect)
 
@@ -145,7 +146,7 @@ class VacuumRobot:
         for row in range(self.rows):
             x = self.GRID_PADDING - 10
             y = self.height - (row + 1) * self.CELL_SIZE - self.GRID_PADDING - self.LABEL_PADDING
-            text = font.render(str(row), True, self.COLORS['text'])
+            text = font.render(str(row+1), True, self.COLORS['text'])
             text_rect = text.get_rect(center=(x, y + self.CELL_SIZE/2))
             self.screen.blit(text, text_rect)
         
